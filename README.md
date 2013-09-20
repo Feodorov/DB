@@ -19,8 +19,10 @@ All commands are accepted in JSON format.
 Run
 ===
 To run server, execute the following command:
+
 java -jar ./target/DB-1.0-SNAPSHOT.jar /Users/kfeodorov/Downloads/DB/ 11111 8080
+
 where:
-/Users/kfeodorov/Downloads/DB/ is a path to folder with DB. Must ends with /
-11111 - TCP port for listening. You can connect to it later via telnet: >telnet localhost 11111
-8080 - HTTP port for listening.
+* /Users/kfeodorov/Downloads/DB/ is a path to folder with DB. Must ends with /
+* 11111 - TCP port for listening. You can connect to it later via telnet: >telnet localhost 11111
+* 8080 - HTTP port for listening.
