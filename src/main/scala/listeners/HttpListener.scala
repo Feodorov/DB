@@ -17,7 +17,6 @@ import spray.http.HttpResponse
 import akka.actor.Terminated
 import scala.concurrent.{ExecutionContext, Await}
 import akka.pattern.ask
-import scala.Option
 
 object HttpListener {
 

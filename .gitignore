@@ -14,3 +14,7 @@ project/plugins/project/
 
 # OS X
 .DS_Store
+
+#Idea
+*.iml
+.idea/

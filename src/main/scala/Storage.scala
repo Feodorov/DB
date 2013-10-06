@@ -65,10 +65,11 @@ class Storage(path: String) extends Actor with ActorLogging {
             try {
               val os = new FileOutputStream(path + name, false)
               person.writeTo(os)
-              os.close()
               "Card " + TextFormat.printToString(person) + " saved successfully"
             } catch {
               case e: IOException => "IO exception"
+            } finally {
+              os.close()
             }
           }
           case None => MESSAGE_MISSING_NAME
@@ -88,11 +89,12 @@ class Storage(path: String) extends Actor with ActorLogging {
               val input = new FileInputStream(path + name)
               val dis = new DataInputStream(input)
               personBuilder.mergeFrom(dis)
-              dis.close()
-              input.close()
               "Card found: " + TextFormat.printToString(personBuilder.build())
             } catch {
               case e: IOException => MESSAGE_NOT_FOUND
+            } finally {
+              dis.close()
+              input.close()
             }
           }
           case None => MESSAGE_MISSING_NAME
