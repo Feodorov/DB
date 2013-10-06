@@ -62,8 +62,9 @@ class Storage(path: String) extends Actor with ActorLogging {
             personBuilder.setName(name)
             personBuilder.setPhone(o.optString(PERSON_PHONE))
             val person = personBuilder.build()
+            var os: FileOutputStream = null
             try {
-              val os = new FileOutputStream(path + name, false)
+              os = new FileOutputStream(path + name, false)
               person.writeTo(os)
               "Card " + TextFormat.printToString(person) + " saved successfully"
             } catch {
@@ -85,9 +86,11 @@ class Storage(path: String) extends Actor with ActorLogging {
         Option(o.getString(PERSON_NAME)) match {
           case Some(name) => {
             val personBuilder = Person.newBuilder()
+            var input: FileInputStream = null
+            var dis: DataInputStream = null
             try {
-              val input = new FileInputStream(path + name)
-              val dis = new DataInputStream(input)
+              input = new FileInputStream(path + name)
+              dis = new DataInputStream(input)
               personBuilder.mergeFrom(dis)
               "Card found: " + TextFormat.printToString(personBuilder.build())
             } catch {
