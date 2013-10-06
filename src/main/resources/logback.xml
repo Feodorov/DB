@@ -1,0 +1,13 @@
+<configuration>
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>DB.log</file>
+        <append>true</append>
+        <encoder>
+            <pattern>%-4relative [%thread] %date %-5level %logger{35} [%file:%line] - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="DEBUG">
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>

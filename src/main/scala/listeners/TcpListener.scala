@@ -47,15 +47,21 @@ class TcpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) exte
   def receive: Receive = {
     case Tcp.Received(data) =>
       import ExecutionContext.Implicits.global
+      val possibleEof = data.apply(0)
       val msg = data.utf8String.trim
       log.debug("Received '{}' from remote address {}", msg, remote)
 
       implicit val timeout = Timeout(2000, MILLISECONDS)
-      val future = context.actorSelection("/user/master/storage") ? msg recover {
-        case _ => "Timeout error"
+      if (4/*EOF*/ == possibleEof && data.toByteBuffer.array().size == 1) {
+        log.debug("EOF received")
+        context.stop(self)
+      } else {
+        val future = context.actorSelection("/user/master/storage") ? msg recover {
+          case _ => "Timeout error"
+        }
+        val result = Await.result(future, timeout.duration).asInstanceOf[String]
+        sender ! Tcp.Write(ByteString(result + "\n"))
       }
-      val result = Await.result(future, timeout.duration).asInstanceOf[String]
-      sender ! Tcp.Write(ByteString(result + "\n"))
     case _: Tcp.ConnectionClosed =>
       log.debug("Stopping, because connection for remote address {} closed", remote)
       context.stop(self)
