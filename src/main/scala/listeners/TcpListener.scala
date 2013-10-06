@@ -55,7 +55,7 @@ class TcpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) exte
         case _ => "Timeout error"
       }
       val result = Await.result(future, timeout.duration).asInstanceOf[String]
-      sender ! Tcp.Write(ByteString(result))
+      sender ! Tcp.Write(ByteString(result + "\n"))
     case _: Tcp.ConnectionClosed =>
       log.debug("Stopping, because connection for remote address {} closed", remote)
       context.stop(self)
