@@ -1,7 +1,6 @@
 import akka.actor.{Props, Actor, ActorLogging}
 import com.google.protobuf.TextFormat
 import java.io._
-import java.net.InetSocketAddress
 import model.PersonCard.Person
 import org.json.{JSONObject, JSONException}
 import scala.Some
@@ -66,7 +65,7 @@ class Storage(path: String) extends Actor with ActorLogging {
             try {
               os = new FileOutputStream(path + name, false)
               person.writeTo(os)
-              "Card " + TextFormat.printToString(person) + " saved successfully"
+              "Card " + person.getName + " saved successfully"
             } catch {
               case e: IOException => "IO exception"
             } finally {

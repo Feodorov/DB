@@ -30,6 +30,10 @@
             <id>dtrott</id>
             <url>http://maven.davidtrott.com/repository</url>
         </pluginRepository>
+        <pluginRepository>
+            <id>oss sonatype</id>
+            <url>https://oss.sonatype.org/content/groups/public</url>
+        </pluginRepository>
     </pluginRepositories>
     <dependencies>
         <dependency>
@@ -38,19 +42,24 @@
             <version>2.10.2</version>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <groupId>org.scalatest</groupId>
+            <artifactId>scalatest_2.10</artifactId>
+            <version>1.9</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>2.4.1</version>
+            <version>2.5.0</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-actor_2.10</artifactId>
+            <version>2.2.0-RC1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-testkit_2.10</artifactId>
             <version>2.2.0-RC1</version>
         </dependency>
         <dependency>
@@ -130,6 +139,31 @@
                         <configuration>
                             <outputDirectory>${project.build.directory}/lib</outputDirectory>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.16</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>maven-scalatest-plugin</artifactId>
+                <configuration>
+                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
+                    <junitxml>.</junitxml>
+                    <filereports>WDF TestSuite.txt</filereports>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>
