@@ -1,3 +1,5 @@
+package storage
+
 import akka.actor.{Props, Actor, ActorLogging}
 import java.io._
 import java.util.Date
@@ -14,27 +16,11 @@ import scala.collection.JavaConversions.{asJavaCollection=>_,_}
  */
 
 object Storage{
-
   def props(path: String): Props = Props(new Storage(path))
 }
 
 class Storage(path: String) extends Actor with ActorLogging {
-  private val MESSAGE_NOT_FOUND = "Value not found"
-  private val MESSAGE_MISSING_NAME = "Missing name"
-  private val MESSAGE_MISSING_DATA = "Missing data"
-  private val MESSAGE_MISSING_CMD = "Missing or unknown command"
-  private val MESSAGE_CMD_DUPLICATE = "Failed. Key already exists"
-  private val MESSAGE_CMD_OK = "Success"
-  private val PERSON_PHONE = "phone"
-  private val PERSON_NAME = "name"
-  private val PERSON_OBJECT = "person"
-  private val CMD_FIELD = "cmd"
-  private val CMD_CREATE = "create"
-  private val CMD_READ = "read"
-  private val CMD_UPDATE = "update"
-  private val CMD_DELETE = "delete"
-  private val COMMIT_LOG_FILE = "commitLog.txt"
-  private val DELETED = "deleted"
+  private val COMMIT_LOG_FILE = self.path.name + "commitLog.txt"
 
   private val dataMap = Map.empty[String, String]
   private val dumpSize = context.system.settings.config.getString("storage.dump_size").toInt
@@ -57,14 +43,14 @@ class Storage(path: String) extends Actor with ActorLogging {
         if (writeLog) logCommand(msg)
 
         val json = new JSONObject(msg.toString.trim)
-        val person = Option(json.getJSONObject(PERSON_OBJECT))
-        Option(json.getString(CMD_FIELD)) match {
-          case Some(CMD_CREATE) => sender ! create(person)
-          case Some(CMD_READ) => sender ! read(person)
-          case Some(CMD_UPDATE) => sender ! update(person)
-          case Some(CMD_DELETE) => sender ! delete(person)
-          case Some(_) => sender ! MESSAGE_MISSING_CMD
-          case None => MESSAGE_MISSING_CMD
+        val person = Option(json.getJSONObject(Messages.PERSON_OBJECT))
+        Option(json.getString(Messages.CMD_FIELD)) match {
+          case Some(Messages.CMD_CREATE) => sender ! create(person)
+          case Some(Messages.CMD_READ) => sender ! read(person)
+          case Some(Messages.CMD_UPDATE) => sender ! update(person)
+          case Some(Messages.CMD_DELETE) => sender ! delete(person)
+          case Some(_) => sender ! Messages.MESSAGE_MISSING_CMD
+          case None => Messages.MESSAGE_MISSING_CMD
         }
       } catch {
         case e: JSONException => sender ! "Parsing error. It is not a valid json"
@@ -74,42 +60,42 @@ class Storage(path: String) extends Actor with ActorLogging {
   private def create(o: Option[JSONObject]): String = {
     o match {
       case Some(o) => {
-        Option(o.getString(PERSON_NAME)) match {
+        Option(o.getString(Messages.PERSON_NAME)) match {
           case Some(name) => {
             if (dataMap.contains(name) || findOnDisk(name)) {//findOnDisk only if contains() return false
-              if (DELETED == dataMap(name)) {
-                dataMap(name) = o.optString(PERSON_PHONE)
-                MESSAGE_CMD_OK
+              if (Messages.DELETED == dataMap(name)) {
+                dataMap(name) = o.optString(Messages.PERSON_PHONE)
+                Messages.MESSAGE_CMD_OK
               } else
-                MESSAGE_CMD_DUPLICATE
+                Messages.MESSAGE_CMD_DUPLICATE
             } else {
-              dataMap += (name -> o.optString(PERSON_PHONE))
-              MESSAGE_CMD_OK
+              dataMap += (name -> o.optString(Messages.PERSON_PHONE))
+              Messages.MESSAGE_CMD_OK
             }
           }
-          case None => MESSAGE_MISSING_NAME
+          case None => Messages.MESSAGE_MISSING_NAME
         }
       }
-      case None => MESSAGE_MISSING_DATA
+      case None => Messages.MESSAGE_MISSING_DATA
     }
   }
 
   private def read(o: Option[JSONObject]): String = {
     o match {
       case Some(o) => {
-        Option(o.getString(PERSON_NAME)) match {
+        Option(o.getString(Messages.PERSON_NAME)) match {
           case Some(name) => {
             if (dataMap.contains(name) || findOnDisk(name)) {
               val value = dataMap(name)
-              if (!value.equals(DELETED)) value
-              else MESSAGE_NOT_FOUND
+              if (!value.equals(Messages.DELETED)) value
+              else Messages.MESSAGE_NOT_FOUND
             }
-            else MESSAGE_NOT_FOUND
+            else Messages.MESSAGE_NOT_FOUND
           }
-          case None => MESSAGE_MISSING_NAME
+          case None => Messages.MESSAGE_MISSING_NAME
         }
       }
-      case None => MESSAGE_NOT_FOUND
+      case None => Messages.MESSAGE_NOT_FOUND
     }
   }
 
@@ -121,15 +107,15 @@ class Storage(path: String) extends Actor with ActorLogging {
   private def delete(o: Option[JSONObject]): String = {
     o match {
       case Some(o) => {
-        Option(o.getString(PERSON_NAME)) match {
+        Option(o.getString(Messages.PERSON_NAME)) match {
           case Some(name) => {
-            dataMap += (name -> DELETED)
-            MESSAGE_CMD_OK
+            dataMap += (name -> Messages.DELETED)
+            Messages.MESSAGE_CMD_OK
           }
-          case None => MESSAGE_MISSING_NAME
+          case None => Messages.MESSAGE_MISSING_NAME
         }
       }
-      case None => MESSAGE_NOT_FOUND
+      case None => Messages.MESSAGE_NOT_FOUND
     }
   }
 
@@ -205,7 +191,7 @@ class Storage(path: String) extends Actor with ActorLogging {
         storage.getPersonList.find(p => p.getName.equals(key)) match {
           case Some(person) => {
             person.getPhone match {
-              case DELETED => {log.debug("Was deleted"); return false}
+              case Messages.DELETED => {log.debug("Was deleted"); return false}
               case _ => {
                 //Store value in memory, as it is
                 dataMap += (person.getName -> person.getPhone)

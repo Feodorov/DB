@@ -3,7 +3,7 @@
         <file>DB.log</file>
         <append>true</append>
         <encoder>
-            <pattern>%-4relative [%thread] %date %-5level %logger{35} [%file:%line] - %msg%n</pattern>
+            <pattern>%-4relative [%thread] %date %-5level %logger{35} %X{akkaSource} [%file:%line] - %msg%n</pattern>
         </encoder>
     </appender>
 

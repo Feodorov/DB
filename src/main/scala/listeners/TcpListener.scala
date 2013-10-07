@@ -8,6 +8,7 @@ import akka.pattern.ask
 import akka.util.{ByteString, Timeout}
 import scala.concurrent.duration._
 import akka.actor.Terminated
+import storage.Messages
 
 /**
  * Date: 16.09.13
@@ -56,8 +57,8 @@ class TcpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) exte
         log.debug("EOF received")
         context.stop(self)
       } else {
-        val future = context.actorSelection("/user/master/storage") ? msg recover {
-          case _ => "Timeout error"
+        val future = context.actorSelection("/user/master/storage-client") ? msg recover {
+          case _ => Messages.MESSAGE_TIMEOUT
         }
         val result = Await.result(future, timeout.duration).asInstanceOf[String]
         sender ! Tcp.Write(ByteString(result + "\n"))

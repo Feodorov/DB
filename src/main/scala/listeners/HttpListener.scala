@@ -56,7 +56,7 @@ class HttpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) ext
           import ExecutionContext.Implicits.global
           implicit val timeout = Timeout(2000, MILLISECONDS)
 
-          val future = context.actorSelection("/user/master/storage") ? query recover {
+          val future = context.actorSelection("/user/master/storage-client") ? query recover {
             case _ => "Timeout error"
           }
           val result = Await.result(future, timeout.duration).asInstanceOf[String]

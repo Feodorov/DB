@@ -1,16 +1,22 @@
 import akka.actor.ActorSystem
+import java.io.File
 
 object Main extends App {
   if (args.size != 3) {
     Console.println(arguments)
     System.exit(1)
   }
-  Console.println(usage)
   val dbPath = args(0)
+  if (!new File(dbPath).exists() || !new File(dbPath + "shard1/").exists() || !new File(dbPath + "shard2/").exists()) {
+    Console.println("""Either path to DB not exists, or dirs "shard1/" or "shard2/" inside it doesn't exist """)
+    System.exit(2)
+  }
+
   val tcpPort = Integer.parseInt(args(1))
   val httpPort = Integer.parseInt(args(2))
   val system = ActorSystem("DB")
 
+  Console.println(usage)
   val master = system.actorOf(Master.props(dbPath, tcpPort, httpPort), "master")
   Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").foreach(line => master ! line)
   master ! "shutdown"

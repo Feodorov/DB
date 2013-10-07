@@ -3,6 +3,7 @@ import akka.testkit.{TestActorRef, ImplicitSender, TestKit}
 import java.io.{InputStreamReader, BufferedReader, File}
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
+import storage.{Messages, Storage}
 
 /**
  * Created with IntelliJ IDEA.
@@ -11,13 +12,13 @@ import org.scalatest.{BeforeAndAfterAll, WordSpec}
  * Time: 17:12
  * To change this template use File | Settings | File Templates.
  */
-class StorageBulkTest extends TestKit(ActorSystem("StorageTest"))
+class StorageBulkTest extends TestKit(ActorSystem("StorageBulkTest"))
 with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
   val DIR = "./test_storage/"
   var storageActorRef: TestActorRef[Storage] = null
 
   override def beforeAll() {
-    val commitLog = new File("./commitLog.txt")
+    val commitLog = new File("./storagecommitLog.txt")
     if (commitLog.exists()) {
       commitLog.delete()
     }
@@ -26,21 +27,21 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
     deleteDir(storageDir)
     storageDir.mkdir()
 
-    storageActorRef = TestActorRef(Props(new Storage(DIR)))
+    storageActorRef = TestActorRef(Props(new Storage(DIR)), name = "storage")
   }
 
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
-//    deleteDir(new File(DIR))
-//    new File("commitLog.txt").delete()
+    deleteDir(new File(DIR))
+    new File("storagecommitLog.txt").delete()
   }
 
-  "Storage (stress tests)" should {
+  "storage (stress tests)" should {
     "support filedump" in {
       val capacity = 20
       for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"kos#" + i + "#\",\"phone\":\"123" + i + "\"}}"
-        expectMsg("Success")
+        expectMsg(Messages.MESSAGE_CMD_OK)
       }
 
       for(i <- 1 to capacity) {
@@ -50,7 +51,7 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
 
       for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"kos#" + i + "#\",\"phone\":\"123" + i + "\"}}"
-        expectMsg("Failed. Key already exists")
+        expectMsg(Messages.MESSAGE_CMD_DUPLICATE)
       }
     }
 
@@ -59,12 +60,12 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
 
       for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"delete\", \"person\":{\"name\":\"kos#" + i + "#\"}}"
-        expectMsg("Success")
+        expectMsg(Messages.MESSAGE_CMD_OK)
       }
 
       for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"kos#" + i + "#\"}}"
-        expectMsg("Value not found")
+        expectMsg(Messages.MESSAGE_NOT_FOUND)
       }
     }
 
@@ -78,7 +79,7 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
       Console.println("Current tests uses up to 0.5Gb of data. If you want to run 4Gb test, change 'capacity' val above this message in code")
       for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"war_and_peace#" + i + "#\",\"phone\":\"" + i + bigData + "\"}}"
-        expectMsg("Success")
+        expectMsg(Messages.MESSAGE_CMD_OK)
         if (0 == i % 100) Console.println(i + " entries added")
       }
 
