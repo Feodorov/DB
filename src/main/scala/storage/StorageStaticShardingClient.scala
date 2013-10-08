@@ -27,24 +27,15 @@ class StorageStaticShardingClient(prefix: String) extends Actor with ActorLoggin
   def receive: Actor.Receive = {
     case msg => {
       try {
-        val json = new JSONObject(msg.toString.trim)
-        Option(json.getJSONObject(Messages.PERSON_OBJECT)) match {
-          case Some(p) => {
-            Option(p) match {
-              case Some(p) => {
-                import ExecutionContext.Implicits.global
-                implicit val timeout = Timeout(2000, MILLISECONDS)
-                val future = getRoute(p.getString(Messages.PERSON_NAME)) ? msg recover {
-                  case _ => Messages.MESSAGE_TIMEOUT
-                }
-                val result = Await.result(future, timeout.duration).asInstanceOf[String]
-                sender ! result
-              }
-              case None => Messages.MESSAGE_MISSING_NAME
-            }
-          }
-          case None => Messages.MESSAGE_MISSING_DATA
+        val name = new JSONObject(msg.toString.trim).optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
+
+        import ExecutionContext.Implicits.global
+        implicit val timeout = Timeout(2000, MILLISECONDS)
+        val future = getRoute(name) ? msg recover {
+          case _ => Messages.MESSAGE_TIMEOUT
         }
+        val result = Await.result(future, timeout.duration).asInstanceOf[String]
+        sender ! result
       } catch {
         case e: JSONException => sender ! "Parsing error. It is not a valid json"
       }

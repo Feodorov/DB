@@ -9,14 +9,15 @@ import akka.actor.{ Actor, ActorLogging, ActorRef, Props}
 import akka.io.{ IO, Tcp }
 import java.net.InetSocketAddress
 import spray.can.Http
-import spray.http.HttpMethods._
 import akka.util.Timeout
 import scala.concurrent.duration._
-import spray.http.HttpRequest
-import spray.http.HttpResponse
 import akka.actor.Terminated
 import scala.concurrent.{ExecutionContext, Await}
 import akka.pattern.ask
+import storage.Messages
+import org.json.JSONObject
+import spray.http._
+
 
 object HttpListener {
 
@@ -38,7 +39,6 @@ class HttpListener(host: String, port: Int) extends Actor with ActorLogging {
 }
 
 object HttpConnectionHandler {
-
   def props(remote: InetSocketAddress, connection: ActorRef): Props =
     Props(new HttpConnectionHandler(remote, connection))
 }
@@ -49,21 +49,24 @@ class HttpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) ext
   context.watch(connection)
 
   def receive: Receive = {
-
-    case HttpRequest(GET, uri, _, _, _) =>
-      uri.query.get("query") match {
-        case Some(query) => {
-          import ExecutionContext.Implicits.global
-          implicit val timeout = Timeout(2000, MILLISECONDS)
-
-          val future = context.actorSelection("/user/master/storage-client") ? query recover {
-            case _ => "Timeout error"
-          }
-          val result = Await.result(future, timeout.duration).asInstanceOf[String]
-          sender ! HttpResponse(entity = result)
-        }
-        case None => sender ! HttpResponse(entity = "Empty query. Try this example: localhost:8080/?query=%7B\"cmd\":\"create\",\"person\":%7B\"name\":\"kos\",\"phone\":\"123\"%7D%7D")
+    case HttpRequest(method, uri, _, entity, _) => {
+      val cmd = method match {
+        case HttpMethods.GET => Messages.CMD_READ
+        case HttpMethods.POST => Messages.CMD_CREATE
+        case HttpMethods.PUT => Messages.CMD_UPDATE
+        case HttpMethods.DELETE => Messages.CMD_DELETE
       }
+
+      import ExecutionContext.Implicits.global
+      implicit val timeout = Timeout(2000, MILLISECONDS)
+
+      val future = context.actorSelection("/user/master/storage-client") ?
+        new JSONObject(entity.asString).put(Messages.CMD_FIELD, cmd) recover {
+        case _ => "Timeout error"
+      }
+      val result = Await.result(future, timeout.duration).asInstanceOf[String]
+      sender ! HttpResponse(entity = result)
+    }
     case _: Tcp.ConnectionClosed =>
       log.debug("Stopping, because connection for remote address {} closed", remote)
       context.stop(self)

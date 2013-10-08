@@ -16,6 +16,14 @@ All commands are accepted in JSON format.
 * To delete record: {"cmd":"delete", "person":{"name":"kos"}}
 * To shutdown server simply print "shutdown" to the console (works only in console, not over http/tcp)
 
+HTTP REST API
+=============
+JSON is the same as above, without "cmd" field:
+* create by key (must not exist): curl -H 'Accept: application/json' -X POST -d '{"person":{"name":"kos","phone":"123"}}' http://localhost:8080/
+* read by key (has to exist): curl -H 'Accept: application/json' -X GET -d '{"person":{"name":"kos"}}' http://localhost:8080/
+* update/replace by key (has to exist): curl -H 'Accept: application/json' -X PUT -d '{"person":{"name":"kos","phone":"456"}}' http://localhost:8080/
+* remove by key (has to exist): curl -H 'Accept: application/json' -X DELETE -d '{"person":{"name":"kos"}}' http://localhost:8080/
+
 Run
 ===
 To run server, execute the following command:

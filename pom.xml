@@ -15,7 +15,7 @@
             <url>http://scala-tools.org/repo-releases</url>
         </repository>
         <repository>
-            <id>spray repo</id>
+            <id>spray</id>
             <name>Spray Repository</name>
             <url>http://repo.spray.io</url>
         </repository>
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>2.4.1</version>
+            <version>2.5.0</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.akka</groupId>
@@ -75,6 +75,11 @@
         <dependency>
             <groupId>io.spray</groupId>
             <artifactId>spray-http</artifactId>
+            <version>1.2-M8</version>
+        </dependency>
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-httpx</artifactId>
             <version>1.2-M8</version>
         </dependency>
         <dependency>
