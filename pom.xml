@@ -176,8 +176,7 @@
                 <configuration>
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
                     <junitxml>.</junitxml>
-                    <argLine>-Xms64m</argLine>
-                    <argLine>-Xmx1024m</argLine>
+                    <argLine>-Xms64m -Xmx1024m</argLine>
                 </configuration>
                 <executions>
                     <execution>

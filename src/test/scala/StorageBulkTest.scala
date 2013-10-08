@@ -3,6 +3,7 @@ import akka.testkit.{TestActorRef, ImplicitSender, TestKit}
 import java.io.{InputStreamReader, BufferedReader, File}
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
+import scala.concurrent.duration._
 import storage.{Messages, Storage}
 
 /**
@@ -37,26 +38,12 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
   }
 
   "storage (stress tests)" should {
-    "support filedump" in {
-      val capacity = 20
+    "not find deleted keys in earlier dumps" in {
+      val capacity = 401
       for(i <- 1 to capacity) {
-        storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"kos#" + i + "#\",\"phone\":\"123" + i + "\"}}"
+        storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"kos#" + i + "#\",\"phone\":\"" + i + "\"}}"
         expectMsg(Messages.MESSAGE_CMD_OK)
       }
-
-      for(i <- 1 to capacity) {
-        storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"kos#" + i + "#\"}}"
-        expectMsg("123" + i)
-      }
-
-      for(i <- 1 to capacity) {
-        storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"kos#" + i + "#\",\"phone\":\"123" + i + "\"}}"
-        expectMsg(Messages.MESSAGE_CMD_DUPLICATE)
-      }
-    }
-
-    "not find deleted keys in earlier dumps" in {
-      val capacity = 20
 
       for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"delete\", \"person\":{\"name\":\"kos#" + i + "#\"}}"
@@ -75,18 +62,30 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
       Iterator.continually(reader.readLine).takeWhile(_ != null).foreach(line => sb.append(line))
       val bigData = sb.toString //2.4Mb string
 
-      val capacity = 200
-      Console.println("Current tests uses up to 0.5Gb of data. If you want to run 4Gb test, change 'capacity' val above this message in code")
+      val capacity = 800
       for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"war_and_peace#" + i + "#\",\"phone\":\"" + i + bigData + "\"}}"
         expectMsg(Messages.MESSAGE_CMD_OK)
-        if (0 == i % 100) Console.println(i + " entries added")
-      }
-
-      for(i <- 1 to capacity) {
         storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"war_and_peace#" + i + "#\"}}"
         expectMsg(i + bigData)
-        if (0 == i % 100) Console.println(i + " entries read")
+
+        if (0 == i % 100) Console.println(i + " entries tested")
+      }
+    }
+
+    "support 1M of 1kb data" in {
+      val sb = new StringBuilder
+      for (i <- 1 to 250) sb.append("test")
+      val bigData = sb.toString //1kb string
+
+      val capacity = 1000000
+      for(i <- 1 to capacity) {
+        if (0 == i % 100000) Console.println(i + " entries tested")
+        storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"small_key#" + i + "#\",\"phone\":\"" + i + bigData + "\"}}"
+        expectMsg(max = new FiniteDuration(10, SECONDS), Messages.MESSAGE_CMD_OK)
+
+        storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"small_key#" + i + "#\"}}"
+        expectMsg(max = new FiniteDuration(10, SECONDS), i + bigData)
       }
     }
   }
