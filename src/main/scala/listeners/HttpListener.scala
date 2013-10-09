@@ -50,22 +50,26 @@ class HttpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) ext
 
   def receive: Receive = {
     case HttpRequest(method, uri, _, entity, _) => {
-      val cmd = method match {
-        case HttpMethods.GET => Messages.CMD_READ
-        case HttpMethods.POST => Messages.CMD_CREATE
-        case HttpMethods.PUT => Messages.CMD_UPDATE
-        case HttpMethods.DELETE => Messages.CMD_DELETE
-      }
+      if (entity.asString.equals("shutdown")) {
+        context.actorSelection("/user/storage-client") ! "shutdown"
+      } else {
+        val cmd = method match {
+          case HttpMethods.GET => Messages.CMD_READ
+          case HttpMethods.POST => Messages.CMD_CREATE
+          case HttpMethods.PUT => Messages.CMD_UPDATE
+          case HttpMethods.DELETE => Messages.CMD_DELETE
+        }
 
-      import ExecutionContext.Implicits.global
-      implicit val timeout = Timeout(2000, MILLISECONDS)
+        import ExecutionContext.Implicits.global
+        implicit val timeout = Timeout(3000, MILLISECONDS)
 
-      val future = context.actorSelection("/user/storage-client") ?
-        new JSONObject(entity.asString).put(Messages.CMD_FIELD, cmd) recover {
-        case _ => "Timeout error"
+        val future = context.actorSelection("/user/storage-client") ?
+          new JSONObject(entity.asString).put(Messages.CMD_FIELD, cmd) recover {
+          case _ => "Timeout error"
+        }
+        val result = Await.result(future, timeout.duration).asInstanceOf[String]
+        sender ! HttpResponse(entity = result)
       }
-      val result = Await.result(future, timeout.duration).asInstanceOf[String]
-      sender ! HttpResponse(entity = result)
     }
     case _: Tcp.ConnectionClosed =>
       log.debug("Stopping, because connection for remote address {} closed", remote)

@@ -25,7 +25,7 @@ object Main extends App {
       actorSystem.actorOf(HttpListener.props("localhost", conf.getInt("client.http_port")), "http-listener")
       actorSystem.actorOf(Props[StorageStaticShardingClient], "storage-client")
       Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").foreach(line => terminalListener ! line)
-      actorSystem.shutdown()
+      terminalListener ! "shutdown"
       actorSystem.awaitTermination()
     }
 
@@ -34,8 +34,6 @@ object Main extends App {
       val actorSystem = ActorSystem("DB", config)
 
       actorSystem.actorOf(Storage.props(config.getString("path"), config.getInt("max_files_on_disk")), config.getString("name"))
-      Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").forall(_ => true)
-      actorSystem.shutdown()
       actorSystem.awaitTermination()
     }
 

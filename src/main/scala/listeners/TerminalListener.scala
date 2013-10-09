@@ -16,13 +16,17 @@ class TerminalListener extends Actor with ActorLogging{
 
   override def receive: Receive = {
     case msg => {
-      import ExecutionContext.Implicits.global
-      implicit val timeout = Timeout(2000, MILLISECONDS)
-      val future = context.actorSelection("/user/storage-client") ? msg recover {
-        case _ => Messages.MESSAGE_TIMEOUT
+      if (msg.equals("shutdown")) {
+        context.actorSelection("/user/storage-client") ! "shutdown"
+      } else {
+        import ExecutionContext.Implicits.global
+        implicit val timeout = Timeout(3000, MILLISECONDS)
+        val future = context.actorSelection("/user/storage-client") ? msg recover {
+          case _ => Messages.MESSAGE_TIMEOUT
+        }
+        val result = Await.result(future, timeout.duration).asInstanceOf[String]
+        Console.println(result)
       }
-      val result = Await.result(future, timeout.duration).asInstanceOf[String]
-      Console.println(result)
     }
   }
 }

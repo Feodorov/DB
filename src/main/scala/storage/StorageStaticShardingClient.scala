@@ -34,15 +34,21 @@ class StorageStaticShardingClient extends Actor with ActorLogging {
 
   def receive: Actor.Receive = {
     case msg => {
+      if (msg.equals("shutdown")) {
+        log.debug("shutdown received")
+        for (shard <- shards.keySet) {
+          context.actorSelection(shard) ! "shutdown"
+        }
+        context.system.shutdown()
+      }
       try {
         val name = new JSONObject(msg.toString.trim).optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
-        import ExecutionContext.Implicits.global
         implicit val timeout = Timeout(2000, MILLISECONDS)
-        //TODO handle exception if shard is down
         val future = getRoute(name) ? msg.toString
         sender ! Await.result(future, timeout.duration).asInstanceOf[String]
       } catch {
         case e: JSONException => sender ! "Parsing error. It is not a valid json"
+        case e: Exception => {log.debug("Caught exception: " + e.getMessage); sender ! Messages.MESSAGE_SHARD_IS_DOWN }
       }
     }
   }

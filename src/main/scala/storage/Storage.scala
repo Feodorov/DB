@@ -47,7 +47,14 @@ class Storage(path: String, maxFiles: Int) extends Actor with ActorLogging {
   log.debug("commit log is at " + new File(COMMIT_LOG_FILE).getAbsolutePath)
 
   def receive: Actor.Receive = {
-    case msg => processMessage(msg, true)
+    case msg => {
+      if (msg.toString.trim.equals("shutdown")) {
+        log.debug("shutdown received")
+        context.system.shutdown()
+      } else {
+        processMessage(msg, true)
+      }
+    }
   }
 
   private def processMessage(msg: Any, writeLog: Boolean) = msg match {
