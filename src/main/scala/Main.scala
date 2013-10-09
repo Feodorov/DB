@@ -1,26 +1,47 @@
-import akka.actor.ActorSystem
-import java.io.File
+import akka.actor.{Props, ActorSystem}
+import com.typesafe.config.ConfigFactory
+import java.net.InetSocketAddress
+import listeners.{HttpListener, TcpListener, TerminalListener}
+import storage.{Storage, StorageStaticShardingClient}
 
 object Main extends App {
-  if (args.size != 3) {
+  if (args.size > 2) {
     Console.println(arguments)
     System.exit(1)
   }
-  val dbPath = args(0)
-  if (!new File(dbPath).exists() || !new File(dbPath + "shard1/").exists() || !new File(dbPath + "shard2/").exists()) {
-    Console.println("""Either path to DB not exists, or dirs "shard1/" or "shard2/" inside it doesn't exist """)
-    System.exit(2)
+  Console.println(usage)
+
+  val role = args(0)
+  val shardNumber = if (2 == args.size) Integer.parseInt(args(1)) else 0
+  val conf = ConfigFactory.load()
+
+  role match {
+    case "client" => {
+      val actorSystem = ActorSystem("DB", conf.getConfig("client"))
+
+      val tcpEndpoint = new InetSocketAddress("localhost", conf.getInt("client.tcp_port"))
+      val terminalListener = actorSystem.actorOf(Props[TerminalListener], "terminal-listener")
+      actorSystem.actorOf(TcpListener.props(tcpEndpoint), "tcp-listener")
+      actorSystem.actorOf(HttpListener.props("localhost", conf.getInt("client.http_port")), "http-listener")
+      actorSystem.actorOf(Props[StorageStaticShardingClient], "storage-client")
+      Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").foreach(line => terminalListener ! line)
+      actorSystem.shutdown()
+      actorSystem.awaitTermination()
+    }
+
+    case "storage" => {
+      val config = conf.getObjectList("storage.instances").get(shardNumber).toConfig
+      val actorSystem = ActorSystem("DB", config)
+
+      actorSystem.actorOf(Storage.props(config.getString("path"), config.getInt("max_files_on_disk")), config.getString("name"))
+      Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").forall(_ => true)
+      actorSystem.shutdown()
+      actorSystem.awaitTermination()
+    }
+
+    case _ => Console.println(arguments); System.exit(2)
   }
 
-  val tcpPort = Integer.parseInt(args(1))
-  val httpPort = Integer.parseInt(args(2))
-  val system = ActorSystem("DB")
-
-  Console.println(usage)
-  val master = system.actorOf(Master.props(dbPath, tcpPort, httpPort), "master")
-  Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").foreach(line => master ! line)
-  master ! "shutdown"
-  system.awaitTermination()
   Console.println("Bye!")
 
   private def usage(): String = "Hi!\n"+
@@ -33,7 +54,7 @@ object Main extends App {
     "To shutdown server simply print \"shutdown\" to the console."
 
   private def arguments(): String = "Missing arguments: " +
-  "/PATH/TO/BD/WITH/SLASH/AT/THE/END/ TCP_PORT HTTP_PORT"
+  "{client|storage} [shard#]"
 }
 
 

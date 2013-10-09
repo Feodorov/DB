@@ -28,7 +28,7 @@ class StorageSimpleTest extends TestKit(ActorSystem("StorageSimpleTest"))
     deleteDir(storageDir)
     storageDir.mkdir()
 
-    storageActorRef = TestActorRef(Props(new Storage(DIR)), name = "storage")
+    storageActorRef = TestActorRef(Props(new Storage(DIR, 10)), name = "storage")
   }
 
   override def afterAll() {
@@ -70,7 +70,7 @@ class StorageSimpleTest extends TestKit(ActorSystem("StorageSimpleTest"))
       storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"crash_test\",\"phone\":\"666\"}}"
       expectMsg(Messages.MESSAGE_CMD_OK)
       storageActorRef ! PoisonPill
-      storageActorRef = TestActorRef(Props(new Storage(DIR)), name = "storage")
+      storageActorRef = TestActorRef(Props(new Storage(DIR, 10)), name = "storage")
       storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"crash_test\"}}"
       expectMsg("666")
     }

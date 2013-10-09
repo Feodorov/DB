@@ -17,15 +17,15 @@ import com.google.protobuf.CodedInputStream
  */
 
 object Storage{
-  def props(path: String): Props = Props(new Storage(path))
+  def props(path: String, maxFiles: Int): Props = Props(new Storage(path, maxFiles))
 }
 
-class Storage(path: String) extends Actor with ActorLogging {
+class Storage(path: String, maxFiles: Int) extends Actor with ActorLogging {
   private val COMMIT_LOG_FILE = self.path.name + "commitLog.txt"
 
   private val dataMap = Map.empty[String, String]
   //threshold. We need to compact snapshots if there are more than maxFilesOnDisk snapshots
-  private val maxFilesOnDisk = context.system.settings.config.getString("storage.max_files_on_disk").toInt
+  private val maxFilesOnDisk = maxFiles
 
   //max allowed total size of all values in dataMap RAM. Dump dataMap on disk if its size (var dataSize) is bigger than dumpSize (in bytes)
   private val dumpSize = Runtime.getRuntime().maxMemory() / 8 //Magic value, figured out during testing

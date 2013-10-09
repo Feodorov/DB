@@ -14,6 +14,7 @@ object Messages {
   val MESSAGE_MISSING_CMD = "Missing or unknown command"
   val MESSAGE_CMD_DUPLICATE = "Failed. Key already exists"
   val MESSAGE_TIMEOUT = "Timeout error"
+  val MESSAGE_SHARD_IS_DOWN = "Shard is down. Sorry."
   val MESSAGE_CMD_OK = "Success"
   val PERSON_PHONE = "phone"
   val PERSON_NAME = "name"

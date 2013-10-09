@@ -18,7 +18,7 @@ class TerminalListener extends Actor with ActorLogging{
     case msg => {
       import ExecutionContext.Implicits.global
       implicit val timeout = Timeout(2000, MILLISECONDS)
-      val future = context.actorSelection("/user/master/storage-client") ? msg recover {
+      val future = context.actorSelection("/user/storage-client") ? msg recover {
         case _ => Messages.MESSAGE_TIMEOUT
       }
       val result = Await.result(future, timeout.duration).asInstanceOf[String]

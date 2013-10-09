@@ -1,13 +1,14 @@
 package storage
 
-import akka.actor.{Props, ActorSelection, ActorLogging, Actor}
+import akka.actor.{ActorSelection, ActorLogging, Actor}
 import org.json.{JSONException, JSONObject}
-import scala.None
 import scala.concurrent.{ExecutionContext, Await}
 import akka.util.Timeout
 import akka.pattern.ask
 import scala.concurrent.duration._
-import scala.Some
+import com.typesafe.config.ConfigFactory
+import scala.collection.JavaConversions._
+import scala.collection.mutable.Map
 
 /**
  * Created with IntelliJ IDEA.
@@ -17,25 +18,29 @@ import scala.Some
  * To change this template use File | Settings | File Templates.
  */
 
-object StorageStaticShardingClient{
-  def props(path: String): Props = Props(new StorageStaticShardingClient(path))
-}
+class StorageStaticShardingClient extends Actor with ActorLogging {
+  private val shards = Map.empty[String, (String, String)]
 
-class StorageStaticShardingClient(prefix: String) extends Actor with ActorLogging {
-  private val shard1MaxKey = context.system.settings.config.getString("storage.shard1.max_key").charAt(0)
+  for (configObj <- ConfigFactory.load().getObjectList("storage.instances")) {
+    val config = configObj.toConfig()
+    val hostname = config.getString("akka.remote.netty.tcp.hostname")
+    val port = config.getInt("akka.remote.netty.tcp.port")
+    val name = config.getString("name")
+    val minKey = config.getString("min_key")
+    val maxKey = config.getString("max_key")
+    val actorPath = "akka.tcp://DB@" + hostname + ":" + port + "/user/" + name
+    shards += (actorPath -> (minKey, maxKey))
+  }
 
   def receive: Actor.Receive = {
     case msg => {
       try {
         val name = new JSONObject(msg.toString.trim).optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
-
         import ExecutionContext.Implicits.global
         implicit val timeout = Timeout(2000, MILLISECONDS)
-        val future = getRoute(name) ? msg recover {
-          case _ => Messages.MESSAGE_TIMEOUT
-        }
-        val result = Await.result(future, timeout.duration).asInstanceOf[String]
-        sender ! result
+        //TODO handle exception if shard is down
+        val future = getRoute(name) ? msg.toString
+        sender ! Await.result(future, timeout.duration).asInstanceOf[String]
       } catch {
         case e: JSONException => sender ! "Parsing error. It is not a valid json"
       }
@@ -43,14 +48,12 @@ class StorageStaticShardingClient(prefix: String) extends Actor with ActorLoggin
   }
 
   private def getRoute(key: String): ActorSelection = {
-    val shard1 = context.actorSelection(prefix + "/storage-shard1")
-    val shard2 = context.actorSelection(prefix + "/storage-shard2")
-
-    if (key.isEmpty) return shard1
     val firstChar = key.charAt(0)
-    if (firstChar <= shard1MaxKey)
-      shard1
-    else
-      shard2
+    for (entry <- shards.entrySet()) {
+      if (firstChar >= entry.getValue._1.charAt(0) &&
+        firstChar < entry.getValue._2.charAt(0)) return context.actorSelection(entry.getKey)
+    }
+    //send somewhere else :)
+    context.actorSelection(shards.entrySet().iterator().next().getKey)
   }
 }

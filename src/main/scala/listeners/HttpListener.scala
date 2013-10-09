@@ -60,7 +60,7 @@ class HttpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) ext
       import ExecutionContext.Implicits.global
       implicit val timeout = Timeout(2000, MILLISECONDS)
 
-      val future = context.actorSelection("/user/master/storage-client") ?
+      val future = context.actorSelection("/user/storage-client") ?
         new JSONObject(entity.asString).put(Messages.CMD_FIELD, cmd) recover {
         case _ => "Timeout error"
       }

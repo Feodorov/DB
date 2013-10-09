@@ -28,7 +28,7 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
     deleteDir(storageDir)
     storageDir.mkdir()
 
-    storageActorRef = TestActorRef(Props(new Storage(DIR)), name = "storage")
+    storageActorRef = TestActorRef(Props(new Storage(DIR, 25)), name = "storage")
   }
 
   override def afterAll() {
@@ -69,7 +69,7 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
         storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"war_and_peace#" + i + "#\"}}"
         expectMsg(i + bigData)
 
-        if (0 == i % 100) Console.println(i + " entries tested")
+        if (0 == i % 100) Console.println(i + " entries of " + capacity + " tested")
       }
     }
 
@@ -80,7 +80,7 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
 
       val capacity = 1000000
       for(i <- 1 to capacity) {
-        if (0 == i % 100000) Console.println(i + " entries tested")
+        if (0 == i % 100000) Console.println(i + " entries of " + capacity + " tested")
         storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"small_key#" + i + "#\",\"phone\":\"" + i + bigData + "\"}}"
         expectMsg(max = new FiniteDuration(10, SECONDS), Messages.MESSAGE_CMD_OK)
 
