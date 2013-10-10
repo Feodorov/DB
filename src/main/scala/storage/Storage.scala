@@ -50,6 +50,7 @@ class Storage(path: String, maxFiles: Int) extends Actor with ActorLogging {
     case msg => {
       if (msg.toString.trim.equals("shutdown")) {
         log.debug("shutdown received")
+        sender ! "OK"
         context.system.shutdown()
       } else {
         processMessage(msg, true)
@@ -57,10 +58,9 @@ class Storage(path: String, maxFiles: Int) extends Actor with ActorLogging {
     }
   }
 
-  private def processMessage(msg: Any, writeLog: Boolean) = msg match {
+  protected def processMessage(msg: Any, writeLog: Boolean) = msg match {
     case msg => {
       try {
-//        log.debug("Processing message {}", msg)
         if (dataSize >= dumpSize) {
           log.debug("Dumping data, because data size is {} bytes, and it is greater than" +
             " maximum allowed value {} (0.25 of max heap size)", dataSize, dumpSize)

@@ -2,7 +2,7 @@ import akka.actor.{Props, ActorSystem}
 import com.typesafe.config.ConfigFactory
 import java.net.InetSocketAddress
 import listeners.{HttpListener, TcpListener, TerminalListener}
-import storage.{Storage, StorageStaticShardingClient}
+import storage.{MasterStorage, Storage, StorageStaticShardingClient}
 
 object Main extends App {
   if (args.size > 2) {
@@ -29,11 +29,19 @@ object Main extends App {
       actorSystem.awaitTermination()
     }
 
-    case "storage" => {
+    case "slave" => {
       val config = conf.getObjectList("storage.instances").get(shardNumber).toConfig
       val actorSystem = ActorSystem("DB", config)
 
       actorSystem.actorOf(Storage.props(config.getString("path"), config.getInt("max_files_on_disk")), config.getString("name"))
+      actorSystem.awaitTermination()
+    }
+
+    case "master" => {
+      val config = conf.getConfig("master")
+      val actorSystem = ActorSystem("DB", config)
+
+      actorSystem.actorOf(MasterStorage.props(config.getString("path"), config.getInt("max_files_on_disk")), config.getString("name"))
       actorSystem.awaitTermination()
     }
 
@@ -52,7 +60,7 @@ object Main extends App {
     "To shutdown server simply print \"shutdown\" to the console."
 
   private def arguments(): String = "Missing arguments: " +
-  "{client|storage} [shard#]"
+  "{client|master|slave} [shard#]"
 }
 
 

@@ -2,7 +2,7 @@ package storage
 
 import akka.actor.{ActorSelection, ActorLogging, Actor}
 import org.json.{JSONException, JSONObject}
-import scala.concurrent.{ExecutionContext, Await}
+import scala.concurrent.Await
 import akka.util.Timeout
 import akka.pattern.ask
 import scala.concurrent.duration._
@@ -19,7 +19,10 @@ import scala.collection.mutable.Map
  */
 
 class StorageStaticShardingClient extends Actor with ActorLogging {
-  private val shards = Map.empty[String, (String, String)]
+  private val masterConfig = ConfigFactory.load().getConfig("master")
+  private val masterPath = "akka.tcp://DB@" + masterConfig.getString("akka.remote.netty.tcp.hostname") +
+    ":" + masterConfig.getInt("akka.remote.netty.tcp.port") + "/user/" + masterConfig.getString("name")
+  private val slaves = Map.empty[String, (String, String)]
 
   for (configObj <- ConfigFactory.load().getObjectList("storage.instances")) {
     val config = configObj.toConfig()
@@ -29,37 +32,48 @@ class StorageStaticShardingClient extends Actor with ActorLogging {
     val minKey = config.getString("min_key")
     val maxKey = config.getString("max_key")
     val actorPath = "akka.tcp://DB@" + hostname + ":" + port + "/user/" + name
-    shards += (actorPath -> (minKey, maxKey))
+    slaves += (actorPath -> (minKey, maxKey))
   }
 
   def receive: Actor.Receive = {
     case msg => {
       if (msg.equals("shutdown")) {
         log.debug("shutdown received")
-        for (shard <- shards.keySet) {
-          context.actorSelection(shard) ! "shutdown"
+        implicit val timeout = Timeout(3000, MILLISECONDS)
+        for (slave <- slaves.keySet) {
+          log.debug("shutting down slave {}", slave)
+          val future = context.actorSelection(slave) ? "shutdown"
+          Await.result(future, timeout.duration).asInstanceOf[String]
         }
+        val future = context.actorSelection(masterPath) ? "shutdown"
+        Await.result(future, timeout.duration).asInstanceOf[String]
         context.system.shutdown()
-      }
-      try {
-        val name = new JSONObject(msg.toString.trim).optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
-        implicit val timeout = Timeout(2000, MILLISECONDS)
-        val future = getRoute(name) ? msg.toString
-        sender ! Await.result(future, timeout.duration).asInstanceOf[String]
-      } catch {
-        case e: JSONException => sender ! "Parsing error. It is not a valid json"
-        case e: Exception => {log.debug("Caught exception: " + e.getMessage); sender ! Messages.MESSAGE_SHARD_IS_DOWN }
+      } else {
+        try {
+          val name = new JSONObject(msg.toString.trim).optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
+          val cmd = new JSONObject(msg.toString.trim).getString(Messages.CMD_FIELD)
+
+          implicit val timeout = Timeout(2000, MILLISECONDS)
+          val future = getRoute(cmd, name) ? msg.toString
+          sender ! Await.result(future, timeout.duration).asInstanceOf[String]
+        } catch {
+          case e: JSONException => sender ! "Parsing error. It is not a valid json"
+          case e: Exception => {log.debug("Caught exception: " + e.getMessage); sender ! Messages.MESSAGE_SHARD_IS_DOWN }
+        }
       }
     }
   }
 
-  private def getRoute(key: String): ActorSelection = {
-    val firstChar = key.charAt(0)
-    for (entry <- shards.entrySet()) {
-      if (firstChar >= entry.getValue._1.charAt(0) &&
-        firstChar < entry.getValue._2.charAt(0)) return context.actorSelection(entry.getKey)
-    }
-    //send somewhere else :)
-    context.actorSelection(shards.entrySet().iterator().next().getKey)
+  private def getRoute(cmd: String, key: String): ActorSelection = {
+    if (cmd.equals(Messages.CMD_READ)) {
+      log.debug("reading from slave")
+      val firstChar = key.charAt(0)
+      for (entry <- slaves.entrySet()) {
+        if (firstChar >= entry.getValue._1.charAt(0) &&
+          firstChar < entry.getValue._2.charAt(0)) return context.actorSelection(entry.getKey)
+      }
+      //send somewhere else :)
+      context.actorSelection(slaves.entrySet().iterator().next().getKey)
+    } else context.actorSelection(masterPath)
   }
 }

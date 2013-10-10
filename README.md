@@ -43,20 +43,23 @@ Run
 ===
 To run a client instance:
 * java -jar ./target/DB-1.0-SNAPSHOT.jar client
-To stop it - print "shutdown". There is an infinite Console.readLine() loop that stops after "shutdown" received
+To stop it - print "shutdown". There is an infinite Console.readLine() loop that stops after "shutdown" received. Also client will shutdown master and slaves
+
+To run a master:
+* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar master
 
 To run a shard:
-* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar storage 0
+* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 0
 where 0 is the index of shard config in storage.instances section of application.conf. In current config version you can use 0 and 1 values.
 
 Test
 =====
-Make sure that settings in application.conf are correct (especially path to shard folder). Run 3 instances - one client and two shards:
+Make sure that settings in application.conf are correct (especially path to shard folder). Run 4 instances - one client, one master and two shards:
 * java -jar ./target/DB-1.0-SNAPSHOT.jar client
-* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar storage 0
-* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar storage 1
+* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar master
+* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 0
+* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 1
 Then run ./static_sharding_run.sh
-Sorry, no graceful shutdown yet, and need to think about batching commands
 
 
 
