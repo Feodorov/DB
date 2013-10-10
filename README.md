@@ -7,12 +7,15 @@ Description
 ===========
 Server accepts commands via console, tcp port and http.
 Server supports 4 major commands: create, read, update, delete.
-All commands are accepted in JSON format. 
+All commands are accepted in JSON format.
+
+Console and Telnet API
+======================
 * To create record simply print this: {"cmd":"create", "person":{"name":"kos","phone":"123"}}
 * To read record: {"cmd":"read", "person":{"name":"kos"}}
 * To update record: {"cmd":"update", "person":{"name":"kos","phone":"456"}}
 * To delete record: {"cmd":"delete", "person":{"name":"kos"}}
-* To shutdown server simply print "shutdown" to the console (works only in console, not over http/tcp)
+* To shutdown server simply print "shutdown" to the console/telnet
 
 HTTP REST API
 =============
@@ -21,6 +24,7 @@ JSON is the same as above, without "cmd" field:
 * read by key (has to exist): curl -H 'Accept: application/json' -X GET -d '{"person":{"name":"kos"}}' http://localhost:8080/
 * update/replace by key (has to exist): curl -H 'Accept: application/json' -X PUT -d '{"person":{"name":"kos","phone":"456"}}' http://localhost:8080/
 * remove by key (has to exist): curl -H 'Accept: application/json' -X DELETE -d '{"person":{"name":"kos"}}' http://localhost:8080/
+* To shutdown just POST/GET/DELETE/PUT/WHATEVER "shutdown"
 
 Configuration and build
 ========================
