@@ -24,20 +24,7 @@ JSON is the same as above, without "cmd" field:
 
 Configuration and build
 ========================
-All configuration is in src/main/resources/application.conf. DB runs in two modes - client, and storage shard.
-Client configuration is in "client" section. Most interesting values are:
-* tcp_port - listens for incoming commands via telnet
-* http_port - listens for incoming commands via http
-* akka.remote.netty.tcp.hostname and akka.remote.netty.tcp.port - hostname and port to listen for messages from storage shards
-
-Storage shards configurations are in storage.instances array.
-* name - any value. commit log for this shard will be prefixed with this name. Also, name is used for remote addressing
-* path - folder to store snapshots. This folder must exists, shard doesn't currently check if it is exists on start :)
-* min_key and max_key - interval for shard keys
-* max_files_on_disk - threshold for compactification of snapshots
-
-Build:
-mvn package
+See INSTALL.md
 
 Run
 ===
@@ -54,12 +41,9 @@ where 0 is the index of shard config in storage.instances section of application
 
 Test
 =====
-Make sure that settings in application.conf are correct (especially path to shard folder). Run 4 instances - one client, one master and two shards:
+Make sure that settings in application.conf are correct (especially path to shard folder). Run client:
 * java -jar ./target/DB-1.0-SNAPSHOT.jar client
-* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar master
-* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 0
-* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 1
-Then run ./static_sharding_run.sh
+* Then run ./static_sharding_run.sh or ./static_sharding_graceful_shutdown_run.sh - these scripts will create and kill master and slaves automatically
 
 
 
