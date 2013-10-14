@@ -25,4 +25,6 @@ object Messages {
   val CMD_UPDATE = "update"
   val CMD_DELETE = "delete"
   val DELETED = "deleted"
+  val ALREADY_RUNNING = "Seems like another instance is running (or there is undeleted" +
+    " *.lock file from previous crash. If so, remove it). Shutdown."
 }

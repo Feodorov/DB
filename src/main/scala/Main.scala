@@ -2,7 +2,7 @@ import akka.actor.{Props, ActorSystem}
 import com.typesafe.config.ConfigFactory
 import java.net.InetSocketAddress
 import listeners.{HttpListener, TcpListener, TerminalListener}
-import storage.{MasterStorage, Storage, StorageStaticShardingClient}
+import storage.{MasterStorage, Storage, StorageStaticShardingClient, Messages, Lock}
 
 object Main extends App {
   if (args.size > 2) {
@@ -17,32 +17,54 @@ object Main extends App {
 
   role match {
     case "client" => {
-      val actorSystem = ActorSystem("DB", conf.getConfig("client"))
+      if (!Lock.createLock("client")) {
+        Console.println(Messages.ALREADY_RUNNING)
+        System.exit(2)
+      }
 
+      val actorSystem = ActorSystem("DB", conf.getConfig("client"))
       val tcpEndpoint = new InetSocketAddress("localhost", conf.getInt("client.tcp_port"))
       val terminalListener = actorSystem.actorOf(Props[TerminalListener], "terminal-listener")
+
       actorSystem.actorOf(TcpListener.props(tcpEndpoint), "tcp-listener")
       actorSystem.actorOf(HttpListener.props("localhost", conf.getInt("client.http_port")), "http-listener")
       actorSystem.actorOf(Props[StorageStaticShardingClient], "storage-client")
+
       Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").foreach(line => terminalListener ! line)
+
       terminalListener ! "shutdown"
       actorSystem.awaitTermination()
+      Lock.removeLock("client")
     }
 
     case "slave" => {
       val config = conf.getObjectList("storage.instances").get(shardNumber).toConfig
-      val actorSystem = ActorSystem("DB", config)
+      val name = config.getString("name")
 
-      actorSystem.actorOf(Storage.props(config.getString("path"), config.getInt("max_files_on_disk")), config.getString("name"))
+      if (!Lock.createLock(name)) {
+        Console.println(Messages.ALREADY_RUNNING)
+        System.exit(2)
+      }
+      val actorSystem = ActorSystem("DB", config)
+      actorSystem.actorOf(Storage.props(config.getString("path"), config.getInt("max_files_on_disk")), name)
       actorSystem.awaitTermination()
+      Lock.removeLock(name)
     }
 
     case "master" => {
       val config = conf.getConfig("master")
+      val name = config.getString("name")
+
+      if (!Lock.createLock(name)) {
+        Console.println(Messages.ALREADY_RUNNING)
+        System.exit(2)
+      }
+
       val actorSystem = ActorSystem("DB", config)
 
-      actorSystem.actorOf(MasterStorage.props(config.getString("path"), config.getInt("max_files_on_disk")), config.getString("name"))
+      actorSystem.actorOf(MasterStorage.props(config.getString("path"), config.getInt("max_files_on_disk")), name)
       actorSystem.awaitTermination()
+      Lock.removeLock(name)
     }
 
     case _ => Console.println(arguments); System.exit(2)

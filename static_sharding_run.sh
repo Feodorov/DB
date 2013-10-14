@@ -54,3 +54,4 @@ done
 kill %1
 kill %2
 kill %3
+rm *.lock

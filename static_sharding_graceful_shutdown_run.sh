@@ -91,4 +91,5 @@ done
 echo "Killing the rest"
 kill %2
 kill %1
+rm *.lock
 echo "Done. Bye"
