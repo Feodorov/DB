@@ -49,5 +49,13 @@ Make sure that settings in application.conf are correct (especially path to shar
 * java -jar ./target/DB-1.0-SNAPSHOT.jar client
 * Then run ./static_sharding_run.sh or ./static_sharding_graceful_shutdown_run.sh - these scripts will create and kill master and slaves automatically
 
+Update:
+=======
+New optional flag "mode" in each command added:
+{"cmd":"create", "mode":"async", "person":{"name":"myName","phone":"cxae"}}
+Possible values:
+* async - master sends create/update/delete to slave, but do not check response - actually we will not know the result
+* sync - master waits for response from slave and return it to the client
+
 
 

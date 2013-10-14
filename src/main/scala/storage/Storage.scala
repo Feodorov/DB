@@ -53,12 +53,12 @@ class Storage(path: String, maxFiles: Int) extends Actor with ActorLogging {
         sender ! "OK"
         context.system.shutdown()
       } else {
-        processMessage(msg, true)
+        sender ! processMessage(msg, true)
       }
     }
   }
 
-  protected def processMessage(msg: Any, writeLog: Boolean) = msg match {
+  protected def processMessage(msg: Any, writeLog: Boolean): String = msg match {
     case msg => {
       try {
         if (dataSize >= dumpSize) {
@@ -72,15 +72,15 @@ class Storage(path: String, maxFiles: Int) extends Actor with ActorLogging {
         val json = new JSONObject(msg.toString.trim)
         val person = Option(json.getJSONObject(Messages.PERSON_OBJECT))
         Option(json.getString(Messages.CMD_FIELD)) match {
-          case Some(Messages.CMD_CREATE) => sender ! create(person)
-          case Some(Messages.CMD_READ) => sender ! read(person)
-          case Some(Messages.CMD_UPDATE) => sender ! update(person)
-          case Some(Messages.CMD_DELETE) => sender ! delete(person)
-          case Some(_) => sender ! Messages.MESSAGE_MISSING_CMD
+          case Some(Messages.CMD_CREATE) => create(person)
+          case Some(Messages.CMD_READ) => read(person)
+          case Some(Messages.CMD_UPDATE) => update(person)
+          case Some(Messages.CMD_DELETE) => delete(person)
+          case Some(_) => Messages.MESSAGE_MISSING_CMD
           case None => Messages.MESSAGE_MISSING_CMD
         }
       } catch {
-        case e: JSONException => sender ! "Parsing error. It is not a valid json"
+        case e: JSONException => "Parsing error. It is not a valid json"
       }
     }
   }

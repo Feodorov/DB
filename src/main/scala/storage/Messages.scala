@@ -16,6 +16,8 @@ object Messages {
   val MESSAGE_TIMEOUT = "Timeout error"
   val MESSAGE_SHARD_IS_DOWN = "Shard is down. Sorry."
   val MESSAGE_CMD_OK = "Success"
+  val MODE_FIELD = "mode"
+  val ASYNC_MODE = "async"
   val PERSON_PHONE = "phone"
   val PERSON_NAME = "name"
   val PERSON_OBJECT = "person"

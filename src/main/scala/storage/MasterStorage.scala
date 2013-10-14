@@ -43,18 +43,32 @@ class MasterStorage(path: String, maxFiles: Int) extends Storage(path, maxFiles)
         sender ! "OK"
         context.system.shutdown()
       } else {
+        val json = new JSONObject(msg.toString.trim)
+        val name = json.optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
+        val mode = json.optString(Messages.MODE_FIELD)
+
         //firstly, replicate to slave
-        try {
-          val name = new JSONObject(msg.toString.trim).optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
-          implicit val timeout = Timeout(2000, MILLISECONDS)
-          val future = getRoute(name) ? msg.toString
-          sender ! Await.result(future, timeout.duration).asInstanceOf[String]
-        } catch {
-          case e: JSONException => sender ! "Parsing error. It is not a valid json"
-          case e: Exception => {log.debug("Caught exception: " + e.getMessage); sender ! Messages.MESSAGE_SHARD_IS_DOWN }
+        if (mode.equals(Messages.ASYNC_MODE)) {
+          //fire-and-forget to slave
+          getRoute(name) ! msg.toString
+          sender ! Messages.MESSAGE_CMD_OK
+        } else {
+          //sync mode - wait for shard to complete replication
+          try {
+            implicit val timeout = Timeout(2000, MILLISECONDS)
+            val future = getRoute(name) ? msg.toString
+            sender ! Await.result(future, timeout.duration).asInstanceOf[String]
+          } catch {
+            case e: JSONException => sender ! "Parsing error. It is not a valid json"
+            case e: Exception => {
+              log.debug("Caught exception: " + e.getMessage)
+              //Inform client that command failed
+              sender ! Messages.MESSAGE_SHARD_IS_DOWN
+            }
+          }
+          //secondly, process message by self
+          processMessage(msg, true)
         }
-        //secondly, process message
-        processMessage(msg, true)
       }
     }
   }
