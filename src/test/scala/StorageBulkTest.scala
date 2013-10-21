@@ -4,7 +4,7 @@ import java.io.{InputStreamReader, BufferedReader, File}
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
 import scala.concurrent.duration._
-import storage.{Messages, Storage}
+import storage.{Slave, Messages}
 
 /**
  * Created with IntelliJ IDEA.
@@ -16,7 +16,7 @@ import storage.{Messages, Storage}
 class StorageBulkTest extends TestKit(ActorSystem("StorageBulkTest"))
 with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
   val DIR = "./test_storage/"
-  var storageActorRef: TestActorRef[Storage] = null
+  var storageActorRef: TestActorRef[Slave] = null
 
   override def beforeAll() {
     val commitLog = new File("./storagecommitLog.txt")
@@ -28,7 +28,7 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
     deleteDir(storageDir)
     storageDir.mkdir()
 
-    storageActorRef = TestActorRef(Props(new Storage(DIR, 25)), name = "storage")
+    storageActorRef = TestActorRef(Props(new Slave(DIR, 25)), name = "storage")
   }
 
   override def afterAll() {

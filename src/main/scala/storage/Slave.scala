@@ -16,11 +16,11 @@ import com.google.protobuf.CodedInputStream
  * kfeodorov@yandex-team.ru
  */
 
-object Storage{
-  def props(path: String, maxFiles: Int): Props = Props(new Storage(path, maxFiles))
+object Slave{
+  def props(path: String, maxFiles: Int): Props = Props(new Slave(path, maxFiles))
 }
 
-class Storage(path: String, maxFiles: Int) extends Actor with ActorLogging {
+class Slave(path: String, maxFiles: Int) extends Actor with ActorLogging {
   private val COMMIT_LOG_FILE = self.path.name + "commitLog.txt"
 
   private val dataMap = Map.empty[String, String]

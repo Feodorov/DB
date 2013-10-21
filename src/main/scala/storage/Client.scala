@@ -18,7 +18,7 @@ import scala.collection.mutable.Map
  * To change this template use File | Settings | File Templates.
  */
 
-class StorageStaticShardingClient extends Actor with ActorLogging {
+class Client extends Actor with ActorLogging {
   private val masterConfig = ConfigFactory.load().getConfig("master")
   private val masterPath = "akka.tcp://DB@" + masterConfig.getString("akka.remote.netty.tcp.hostname") +
     ":" + masterConfig.getInt("akka.remote.netty.tcp.port") + "/user/" + masterConfig.getString("name")

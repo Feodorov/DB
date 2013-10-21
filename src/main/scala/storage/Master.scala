@@ -1,6 +1,6 @@
 package storage
 
-import akka.actor.{ActorSelection, Actor, Props}
+import akka.actor.{Actor, Props}
 import scala.collection.mutable.Map
 import com.typesafe.config.ConfigFactory
 import scala.collection.JavaConversions._
@@ -18,11 +18,11 @@ import akka.pattern.ask
  * To change this template use File | Settings | File Templates.
  */
 
-object MasterStorage{
-  def props(path: String, maxFiles: Int): Props = Props(new MasterStorage(path, maxFiles))
+object Master{
+  def props(path: String, maxFiles: Int): Props = Props(new Master(path, maxFiles))
 }
 
-class MasterStorage(path: String, maxFiles: Int) extends Storage(path, maxFiles) {
+class Master(path: String, maxFiles: Int) extends Slave(path, maxFiles) {
   private val slaves = Map.empty[String, (String, String)]
 
   for (configObj <- ConfigFactory.load().getObjectList("storage.instances")) {

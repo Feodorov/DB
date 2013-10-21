@@ -1,9 +1,9 @@
 import akka.actor.{Props, ActorSystem}
 import com.typesafe.config.ConfigFactory
-import java.io.{File, FileNotFoundException}
+import java.io.File
 import java.net.InetSocketAddress
 import listeners.{HttpListener, TcpListener, TerminalListener}
-import storage.{MasterStorage, Storage, StorageStaticShardingClient, Messages, Lock}
+import storage.{Master, Slave, Client, Messages, Lock}
 
 object Main extends App {
   if (args.size > 2) {
@@ -29,7 +29,7 @@ object Main extends App {
 
       actorSystem.actorOf(TcpListener.props(tcpEndpoint), "tcp-listener")
       actorSystem.actorOf(HttpListener.props("localhost", conf.getInt("client.http_port")), "http-listener")
-      actorSystem.actorOf(Props[StorageStaticShardingClient], "storage-client")
+      actorSystem.actorOf(Props[Client], "storage-client")
 
       Iterator.continually(Console.readLine).filter(_ != null).takeWhile(_ != "shutdown").foreach(line => terminalListener ! line)
 
@@ -49,12 +49,12 @@ object Main extends App {
       }
 
       if (! new File(path).exists()) {
-        Console.println(s"Storage dir $path doesn't exists")
+        Console.println(s"Slave dir $path doesn't exists")
         System.exit(3)
       }
 
       val actorSystem = ActorSystem("DB", config)
-      actorSystem.actorOf(Storage.props(path, config.getInt("max_files_on_disk")), name)
+      actorSystem.actorOf(Slave.props(path, config.getInt("max_files_on_disk")), name)
       actorSystem.awaitTermination()
       Lock.removeLock(name)
     }
@@ -71,12 +71,12 @@ object Main extends App {
       }
 
       if (! new File(path).exists()) {
-        Console.println(s"Storage dir $path doesn't exists")
+        Console.println(s"Slave dir $path doesn't exists")
         System.exit(3)
       }
 
       val actorSystem = ActorSystem("DB", config)
-      actorSystem.actorOf(MasterStorage.props(path, config.getInt("max_files_on_disk")), name)
+      actorSystem.actorOf(Master.props(path, config.getInt("max_files_on_disk")), name)
       actorSystem.awaitTermination()
       Lock.removeLock(name)
     }

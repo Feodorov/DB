@@ -3,7 +3,7 @@ import akka.actor.{PoisonPill, Props, ActorSystem}
 import akka.testkit.{TestActorRef, ImplicitSender, TestKit}
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
-import storage.{Messages, Storage}
+import storage.{Messages, Slave}
 
 /**
  * Created with IntelliJ IDEA.
@@ -16,7 +16,7 @@ class StorageSimpleTest extends TestKit(ActorSystem("StorageSimpleTest"))
   with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
 
   val DIR = "./test_storage/"
-  var storageActorRef: TestActorRef[Storage] = null
+  var storageActorRef: TestActorRef[Slave] = null
 
   override def beforeAll() {
     val commitLog = new File("storagecommitLog.txt")
@@ -28,7 +28,7 @@ class StorageSimpleTest extends TestKit(ActorSystem("StorageSimpleTest"))
     deleteDir(storageDir)
     storageDir.mkdir()
 
-    storageActorRef = TestActorRef(Props(new Storage(DIR, 10)), name = "storage")
+    storageActorRef = TestActorRef(Props(new Slave(DIR, 10)), name = "storage")
   }
 
   override def afterAll() {
@@ -70,7 +70,7 @@ class StorageSimpleTest extends TestKit(ActorSystem("StorageSimpleTest"))
       storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"crash_test\",\"phone\":\"666\"}}"
       expectMsg(Messages.MESSAGE_CMD_OK)
       storageActorRef ! PoisonPill
-      storageActorRef = TestActorRef(Props(new Storage(DIR, 10)), name = "storage")
+      storageActorRef = TestActorRef(Props(new Slave(DIR, 10)), name = "storage")
       storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"crash_test\"}}"
       expectMsg("666")
     }
