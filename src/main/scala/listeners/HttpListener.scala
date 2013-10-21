@@ -53,18 +53,12 @@ class HttpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) ext
       if (entity.asString.equals("shutdown")) {
         context.actorSelection("/user/storage-client") ! "shutdown"
       } else {
-        val cmd = method match {
-          case HttpMethods.GET => Messages.CMD_READ
-          case HttpMethods.POST => Messages.CMD_CREATE
-          case HttpMethods.PUT => Messages.CMD_UPDATE
-          case HttpMethods.DELETE => Messages.CMD_DELETE
-        }
+
 
         import ExecutionContext.Implicits.global
         implicit val timeout = Timeout(4000, MILLISECONDS)
 
-        val future = context.actorSelection("/user/storage-client") ?
-          new JSONObject(entity.asString).put(Messages.CMD_FIELD, cmd) recover {
+        val future = context.actorSelection("/user/storage-client") ? constructCommand(method, uri, entity) recover {
           case _ => "Timeout error"
         }
         val result = Await.result(future, timeout.duration).asInstanceOf[String]
@@ -77,6 +71,31 @@ class HttpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) ext
     case Terminated(`connection`) =>
       log.debug("Stopping, because connection for remote address {} died", remote)
       context.stop(self)
+  }
+
+  private def constructCommand(method: HttpMethod, uri: Uri, entity: HttpEntity): JSONObject = {
+    val message = new JSONObject()
+
+    val cmd = method match {
+      case HttpMethods.GET => Messages.CMD_READ
+      case HttpMethods.POST => Messages.CMD_CREATE
+      case HttpMethods.PUT => Messages.CMD_UPDATE
+      case HttpMethods.DELETE => Messages.CMD_DELETE
+    }
+    message.put(Messages.CMD_FIELD, cmd)
+
+    if (uri.toString.contains(Messages.ASYNC_MODE)) {
+      message.put(Messages.MODE_FIELD, Messages.ASYNC_MODE)
+    }
+    val person = new JSONObject().put(Messages.PERSON_NAME, uri.path.tail.reverse.head)
+
+    if (!entity.toString.isEmpty &&
+      (cmd.equals(Messages.CMD_CREATE) ||
+      cmd.equals(Messages.CMD_UPDATE))) {
+      person.put(Messages.PERSON_PHONE, entity.asString)
+    }
+    message.put(Messages.PERSON_OBJECT, person)
+    message
   }
 }
 

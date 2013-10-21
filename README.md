@@ -20,11 +20,12 @@ Console and Telnet API
 HTTP REST API
 =============
 JSON is the same as above, without "cmd" field:
-* create by key (must not exist): curl -H 'Accept: application/json' -X POST -d '{"person":{"name":"kos","phone":"123"}}' http://localhost:8080/
-* read by key (has to exist): curl -H 'Accept: application/json' -X GET -d '{"person":{"name":"kos"}}' http://localhost:8080/
-* update/replace by key (has to exist): curl -H 'Accept: application/json' -X PUT -d '{"person":{"name":"kos","phone":"456"}}' http://localhost:8080/
-* remove by key (has to exist): curl -H 'Accept: application/json' -X DELETE -d '{"person":{"name":"kos"}}' http://localhost:8080/
+* create by key (must not exist): curl -H 'Accept: application/json' -X POST -d '123' http://localhost:8080/async/kos
+* read by key (has to exist): curl -H 'Accept: application/json' -X GET http://localhost:8080/async/kos
+* update/replace by key (has to exist): curl -H 'Accept: application/json' -X PUT -d '456' http://localhost:8080/async/kos
+* remove by key (has to exist): curl -H 'Accept: application/json' -X DELETE http://localhost:8080/kos
 * To shutdown just POST/GET/DELETE/PUT/WHATEVER "shutdown"
+* You can add /async to the root of path to run in async mode (master doesn't wait for response from slave)
 
 Configuration and build
 ========================
@@ -55,7 +56,7 @@ New optional flag "mode" in each command added:
 {"cmd":"create", "mode":"async", "person":{"name":"myName","phone":"cxae"}}
 Possible values:
 * async - master sends create/update/delete to slave, but do not check response - actually we will not know the result
-* sync - master waits for response from slave and return it to the client
+If "mode" is omitted - master waits for response from slave and return it to the client
 
 
 

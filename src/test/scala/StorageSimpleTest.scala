@@ -19,7 +19,7 @@ class StorageSimpleTest extends TestKit(ActorSystem("StorageSimpleTest"))
   var storageActorRef: TestActorRef[Slave] = null
 
   override def beforeAll() {
-    val commitLog = new File("storagecommitLog.txt")
+    val commitLog = new File("slavecommitLog.txt")
     if (commitLog.exists()) {
       commitLog.delete()
     }
@@ -34,7 +34,7 @@ class StorageSimpleTest extends TestKit(ActorSystem("StorageSimpleTest"))
   override def afterAll() {
     TestKit.shutdownActorSystem(system)
     deleteDir(new File(DIR))
-    new File("storagecommitLog.txt").delete()
+    new File("slavecommitLog.txt").delete()
   }
 
   "storage (simple operations) " should {
