@@ -46,24 +46,24 @@ class MasterStorage(path: String, maxFiles: Int) extends Storage(path, maxFiles)
         val json = new JSONObject(msg.toString.trim)
         val name = json.optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
         val mode = json.optString(Messages.MODE_FIELD)
-
+        val path = getRoute(name)
         //firstly, replicate to slave
         if (mode.equals(Messages.ASYNC_MODE)) {
           //fire-and-forget to slave
-          getRoute(name) ! msg.toString
+          context.actorSelection(path) ! msg.toString
           sender ! Messages.MESSAGE_CMD_OK
         } else {
           //sync mode - wait for shard to complete replication
           try {
             implicit val timeout = Timeout(2000, MILLISECONDS)
-            val future = getRoute(name) ? msg.toString
+            val future = context.actorSelection(path) ? msg.toString
             sender ! Await.result(future, timeout.duration).asInstanceOf[String]
           } catch {
             case e: JSONException => sender ! "Parsing error. It is not a valid json"
             case e: Exception => {
               log.debug("Caught exception: " + e.getMessage)
               //Inform client that command failed
-              sender ! Messages.MESSAGE_SHARD_IS_DOWN
+              sender ! Messages.MESSAGE_SHARD_IS_DOWN + path + " (client didn't respond in time). Information saved only to master."
             }
           }
           //secondly, process message by self
@@ -73,13 +73,13 @@ class MasterStorage(path: String, maxFiles: Int) extends Storage(path, maxFiles)
     }
   }
 
-  private def getRoute(key: String): ActorSelection = {
+  private def getRoute(key: String): String = {
     val firstChar = key.charAt(0)
     for (entry <- slaves.entrySet()) {
       if (firstChar >= entry.getValue._1.charAt(0) &&
-        firstChar < entry.getValue._2.charAt(0)) return context.actorSelection(entry.getKey)
+        firstChar < entry.getValue._2.charAt(0)) return entry.getKey
     }
     //send somewhere else :)
-    context.actorSelection(slaves.entrySet().iterator().next().getKey)
+    slaves.entrySet().iterator().next().getKey
   }
 }

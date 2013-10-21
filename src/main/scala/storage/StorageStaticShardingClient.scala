@@ -49,31 +49,36 @@ class StorageStaticShardingClient extends Actor with ActorLogging {
         Await.result(future, timeout.duration).asInstanceOf[String]
         context.system.shutdown()
       } else {
+        var path: String = "unknown path"
         try {
           val name = new JSONObject(msg.toString.trim).optJSONObject(Messages.PERSON_OBJECT).optString(Messages.PERSON_NAME)
           val cmd = new JSONObject(msg.toString.trim).getString(Messages.CMD_FIELD)
 
-          implicit val timeout = Timeout(2000, MILLISECONDS)
-          val future = getRoute(cmd, name) ? msg.toString
+          implicit val timeout = Timeout(3000, MILLISECONDS)
+          path = getRoute(cmd, name)
+          val future = context.actorSelection(path) ? msg.toString
           sender ! Await.result(future, timeout.duration).asInstanceOf[String]
         } catch {
           case e: JSONException => sender ! "Parsing error. It is not a valid json"
-          case e: Exception => {log.debug("Caught exception: " + e.getMessage); sender ! Messages.MESSAGE_SHARD_IS_DOWN }
+          case e: Exception => {
+            log.debug("Caught exception: " + e.getMessage)
+            sender ! Messages.MESSAGE_SHARD_IS_DOWN + path + " (didn't respond in time)"
+          }
         }
       }
     }
   }
 
-  private def getRoute(cmd: String, key: String): ActorSelection = {
+  private def getRoute(cmd: String, key: String): String = {
     if (cmd.equals(Messages.CMD_READ)) {
       log.debug("reading from slave")
       val firstChar = key.charAt(0)
       for (entry <- slaves.entrySet()) {
         if (firstChar >= entry.getValue._1.charAt(0) &&
-          firstChar < entry.getValue._2.charAt(0)) return context.actorSelection(entry.getKey)
+          firstChar < entry.getValue._2.charAt(0)) return entry.getKey
       }
       //send somewhere else :)
-      context.actorSelection(slaves.entrySet().iterator().next().getKey)
-    } else context.actorSelection(masterPath)
+      slaves.entrySet().iterator().next().getKey
+    } else masterPath
   }
 }

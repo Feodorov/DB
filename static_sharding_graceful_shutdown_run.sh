@@ -74,7 +74,7 @@ for i in {1..10}; do
 
     AREAD_RESPONSE=$(curl -H 'Accept: application/json' -X GET -d "$AREAD" http://localhost:8080/ 2> /dev/null)
     ZREAD_RESPONSE=$(curl -H 'Accept: application/json' -X GET -d "$ZREAD" http://localhost:8080/ 2> /dev/null)
-    if [ "$ZREAD_RESPONSE" != "Shard is down. Sorry." ]
+    if [ $ZREAD_RESPONSE != Shard* ]
     then
       echo "Wrong create response: $ZREAD_RESPONSE"
     else

@@ -1,5 +1,6 @@
 import akka.actor.{Props, ActorSystem}
 import com.typesafe.config.ConfigFactory
+import java.io.{File, FileNotFoundException}
 import java.net.InetSocketAddress
 import listeners.{HttpListener, TcpListener, TerminalListener}
 import storage.{MasterStorage, Storage, StorageStaticShardingClient, Messages, Lock}
@@ -40,13 +41,20 @@ object Main extends App {
     case "slave" => {
       val config = conf.getObjectList("storage.instances").get(shardNumber).toConfig
       val name = config.getString("name")
+      val path = config.getString("path")
 
       if (!Lock.createLock(name)) {
         Console.println(Messages.ALREADY_RUNNING)
         System.exit(2)
       }
+
+      if (! new File(path).exists()) {
+        Console.println(s"Storage dir $path doesn't exists")
+        System.exit(3)
+      }
+
       val actorSystem = ActorSystem("DB", config)
-      actorSystem.actorOf(Storage.props(config.getString("path"), config.getInt("max_files_on_disk")), name)
+      actorSystem.actorOf(Storage.props(path, config.getInt("max_files_on_disk")), name)
       actorSystem.awaitTermination()
       Lock.removeLock(name)
     }
@@ -54,15 +62,21 @@ object Main extends App {
     case "master" => {
       val config = conf.getConfig("master")
       val name = config.getString("name")
+      val path = config.getString("path")
+
 
       if (!Lock.createLock(name)) {
         Console.println(Messages.ALREADY_RUNNING)
         System.exit(2)
       }
 
-      val actorSystem = ActorSystem("DB", config)
+      if (! new File(path).exists()) {
+        Console.println(s"Storage dir $path doesn't exists")
+        System.exit(3)
+      }
 
-      actorSystem.actorOf(MasterStorage.props(config.getString("path"), config.getInt("max_files_on_disk")), name)
+      val actorSystem = ActorSystem("DB", config)
+      actorSystem.actorOf(MasterStorage.props(path, config.getInt("max_files_on_disk")), name)
       actorSystem.awaitTermination()
       Lock.removeLock(name)
     }

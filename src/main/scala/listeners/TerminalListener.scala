@@ -20,7 +20,7 @@ class TerminalListener extends Actor with ActorLogging{
         context.actorSelection("/user/storage-client") ! "shutdown"
       } else {
         import ExecutionContext.Implicits.global
-        implicit val timeout = Timeout(3000, MILLISECONDS)
+        implicit val timeout = Timeout(4000, MILLISECONDS)
         val future = context.actorSelection("/user/storage-client") ? msg recover {
           case _ => Messages.MESSAGE_TIMEOUT
         }

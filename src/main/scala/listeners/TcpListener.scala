@@ -55,7 +55,7 @@ class TcpConnectionHandler(remote: InetSocketAddress, connection: ActorRef) exte
       if (msg.equals("shutdown")) {
         context.actorSelection("/user/storage-client") ! "shutdown"
       } else {
-        implicit val timeout = Timeout(3000, MILLISECONDS)
+        implicit val timeout = Timeout(4000, MILLISECONDS)
         if (4/*EOF*/ == possibleEof && data.toByteBuffer.array().size == 1) {
           log.debug("EOF received")
           context.stop(self)
