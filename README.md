@@ -44,6 +44,9 @@ To run a shard:
 * java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 0
 where 0 is the index of shard config in storage.instances section of application.conf. In current config version you can use 0 and 1 values.
 
+To run compact tool:
+* java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar compact /abs/path/to/storage
+
 Test
 =====
 Make sure that settings in application.conf are correct (especially path to shard folder). Run client:

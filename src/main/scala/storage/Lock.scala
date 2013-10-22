@@ -23,4 +23,17 @@ object Lock {
   def removeLock(name: String) = {
     new File(name + ".lock").delete()
   }
+
+  def createLock(dir: String, name: String): Boolean = {
+    // createNewFile() returns false if file already exists
+    new File(dir, name + ".lock").createNewFile()
+  }
+
+  def isLocked(dir: String, name: String): Boolean = {
+    new File(dir, name + ".lock").exists()
+  }
+
+  def removeLock(dir: String, name: String) = {
+    new File(dir, name + ".lock").delete()
+  }
 }

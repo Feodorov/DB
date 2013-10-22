@@ -4,7 +4,11 @@ import java.io.{InputStreamReader, BufferedReader, File}
 import org.scalatest.matchers.MustMatchers
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext
 import storage.{Slave, Messages}
+import utils.CompactTool
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 /**
  * Created with IntelliJ IDEA.
@@ -29,6 +33,10 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
     storageDir.mkdir()
 
     storageActorRef = TestActorRef(Props(new Slave(DIR, 25)), name = "storage")
+
+    import ExecutionContext.Implicits.global
+    system.scheduler.schedule(Duration.create(0, TimeUnit.MILLISECONDS), Duration.create(10000, TimeUnit.MILLISECONDS),
+      new Runnable { override def run = CompactTool.compactSnapshots(DIR)})
   }
 
   override def afterAll() {
@@ -56,23 +64,6 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
       }
     }
 
-    "support more than 4Gb of data" in {
-      val reader = new BufferedReader(new InputStreamReader(this.getClass.getResourceAsStream("war_and_peace.txt")))
-      val sb = new StringBuilder
-      Iterator.continually(reader.readLine).takeWhile(_ != null).foreach(line => sb.append(line))
-      val bigData = sb.toString //2.4Mb string
-
-      val capacity = 800
-      for(i <- 1 to capacity) {
-        storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"war_and_peace#" + i + "#\",\"phone\":\"" + i + bigData + "\"}}"
-        expectMsg(Messages.MESSAGE_CMD_OK)
-        storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"war_and_peace#" + i + "#\"}}"
-        expectMsg(i + bigData)
-
-        if (0 == i % 100) Console.println(i + " entries of " + capacity + " tested")
-      }
-    }
-
     "support 1M of 1kb data" in {
       val sb = new StringBuilder
       for (i <- 1 to 250) sb.append("test")
@@ -80,10 +71,13 @@ with ImplicitSender with WordSpec with BeforeAndAfterAll with MustMatchers {
 
       val capacity = 1000000
       for(i <- 1 to capacity) {
-        if (0 == i % 100000) Console.println(i + " entries of " + capacity + " tested")
+        if (0 == i % 100000) Console.println(i + " entries of " + capacity + " created")
         storageActorRef ! "{\"cmd\":\"create\", \"person\":{\"name\":\"small_key#" + i + "#\",\"phone\":\"" + i + bigData + "\"}}"
         expectMsg(max = new FiniteDuration(10, SECONDS), Messages.MESSAGE_CMD_OK)
+      }
 
+      for(i <- 1 to capacity by capacity / 20) {
+        Console.println("Reading entry " + i)
         storageActorRef ! "{\"cmd\":\"read\", \"person\":{\"name\":\"small_key#" + i + "#\"}}"
         expectMsg(max = new FiniteDuration(10, SECONDS), i + bigData)
       }

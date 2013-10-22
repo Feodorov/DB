@@ -5,9 +5,9 @@ rm storage-mastercommitLog.txt
 
 read -p "Make sure that you've launched the client: java -jar ./target/DB-1.0-SNAPSHOT.jar client. Press [Enter]..."
 
-java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar master > /dev/null &
-java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 0 > /dev/null &
-java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 1 > /dev/null &
+java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar master &
+java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 0 &
+java -Xmx512m -jar ./target/DB-1.0-SNAPSHOT.jar slave 1 &
 sleep 3s
 
 BIGSTRING="Actors are very lightweight concurrent entities. They process messages asynchronously using an event-driven receive loop. Pattern matching against messages is a convenient way to express an actors behavior. They raise the abstraction level and make it much easier to write, test, understand and maintain concurrent and/or distributed systems. You focus on workflow—how the messages flow in the system—instead of low level primitives like threads, locks and socket IO"
@@ -17,10 +17,8 @@ echo "Populating shard 0..."
 for i in {1..10}; do
     echo "-------------------"
     echo "iteration $i of 10"
-    CREATE="{\"person\":{\"name\":\"akos$i\",\"phone\":\"aaa$i$BIGSTRING\"}}"
-    READ="{\"person\":{\"name\":\"akos$i\"}}"
-    CREATE_RESPONSE=$(curl -H 'Accept: application/json' -X POST -d "$CREATE" http://localhost:8080/ 2> /dev/null)
-    READ_RESPONSE=$(curl -H 'Accept: application/json' -X GET -d "$READ" http://localhost:8080/ 2> /dev/null)
+    CREATE_RESPONSE=$(curl -H 'Accept: application/json' -X POST -d "aaa$i$BIGSTRING" http://localhost:8080/akos$i 2> /dev/null)
+    READ_RESPONSE=$(curl -H 'Accept: application/json' -X GET http://localhost:8080/akos$i 2> /dev/null)
     if [ "$CREATE_RESPONSE" != "Success" ]
    	then
    		echo "Wrong create response: $CREATE_RESPONSE"
@@ -41,10 +39,8 @@ echo "Populating shard 1..."
 for i in {1..10}; do
     echo "-------------------"
     echo "iteration $i of 10"
-    CREATE="{\"person\":{\"name\":\"zkos$i\",\"phone\":\"zzz$i$BIGSTRING\"}}"
-    READ="{\"person\":{\"name\":\"zkos$i\"}}"
-    CREATE_RESPONSE=$(curl -H 'Accept: application/json' -X POST -d "$CREATE" http://localhost:8080/ 2> /dev/null)
-    READ_RESPONSE=$(curl -H 'Accept: application/json' -X GET -d "$READ" http://localhost:8080/ 2> /dev/null)
+    CREATE_RESPONSE=$(curl -H 'Accept: application/json' -X POST -d "zzz$i$BIGSTRING" http://localhost:8080/zkos$i 2> /dev/null)
+    READ_RESPONSE=$(curl -H 'Accept: application/json' -X GET http://localhost:8080/zkos$i 2> /dev/null)
     if [ "$CREATE_RESPONSE" != "Success" ]
     then
       echo "Wrong create response: $CREATE_RESPONSE"
@@ -72,9 +68,9 @@ for i in {1..10}; do
     AREAD="{\"person\":{\"name\":\"akos$i\"}}"
     ZREAD="{\"person\":{\"name\":\"zkos$i\"}}"
 
-    AREAD_RESPONSE=$(curl -H 'Accept: application/json' -X GET -d "$AREAD" http://localhost:8080/ 2> /dev/null)
-    ZREAD_RESPONSE=$(curl -H 'Accept: application/json' -X GET -d "$ZREAD" http://localhost:8080/ 2> /dev/null)
-    if [ $ZREAD_RESPONSE != Shard* ]
+    AREAD_RESPONSE=$(curl -H 'Accept: application/json' -X GET http://localhost:8080/akos$i 2> /dev/null)
+    ZREAD_RESPONSE=$(curl -H 'Accept: application/json' -X GET http://localhost:8080/zkos$i 2> /dev/null)
+    if [[ $ZREAD_RESPONSE != Shard* ]]
     then
       echo "Wrong create response: $ZREAD_RESPONSE"
     else
