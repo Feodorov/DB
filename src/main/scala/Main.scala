@@ -26,6 +26,10 @@ object Main extends App {
         System.exit(2)
       }
 
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        override def run() = {println("Removing lock client"); Lock.removeLock("client")}
+      })
+
       val actorSystem = ActorSystem("DB", conf.getConfig("client"))
       val tcpEndpoint = new InetSocketAddress("localhost", conf.getInt("client.tcp_port"))
       val terminalListener = actorSystem.actorOf(Props[TerminalListener], "terminal-listener")
@@ -38,7 +42,6 @@ object Main extends App {
 
       terminalListener ! "shutdown"
       actorSystem.awaitTermination()
-      Lock.removeLock("client")
     }
 
     case "slave" => {
@@ -56,7 +59,9 @@ object Main extends App {
         Console.println(s"Slave dir $path doesn't exists")
         System.exit(3)
       }
-
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        override def run() = {println("Removing lock " + name); Lock.removeLock(name)}
+      })
       val actorSystem = ActorSystem("DB", config)
       actorSystem.actorOf(Slave.props(path, config.getInt("max_files_on_disk")), name)
       import ExecutionContext.Implicits.global
@@ -64,7 +69,6 @@ object Main extends App {
         Duration.create(config.getInt("compact_period"), TimeUnit.MILLISECONDS),
         new Runnable { override def run = CompactTool.compactSnapshots(path)})
       actorSystem.awaitTermination()
-      Lock.removeLock(name)
     }
 
     case "master" => {
@@ -72,6 +76,9 @@ object Main extends App {
       val name = config.getString("name")
       val path = config.getString("path")
 
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        override def run() = {println("Removing lock " + name); Lock.removeLock(name)}
+      })
 
       if (!Lock.createLock(name)) {
         Console.println(Messages.ALREADY_RUNNING)
@@ -90,7 +97,6 @@ object Main extends App {
         Duration.create(config.getInt("compact_period"), TimeUnit.MILLISECONDS),
         new Runnable { override def run = CompactTool.compactSnapshots(path)})
       actorSystem.awaitTermination()
-      Lock.removeLock(name)
     }
 
     case "compact" => {
